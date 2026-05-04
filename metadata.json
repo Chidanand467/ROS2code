@@ -1,0 +1,6 @@
+{
+  "name": "ROS2Code - Robotics LeetCode Platform",
+  "description": "A hands-on platform for ROS 2 problem solving with integrated simulation and automated feedback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["AI-powered code grading", "Simulation-based challenges", "Gamified learning path"]
+}
