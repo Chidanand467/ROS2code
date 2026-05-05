@@ -24,19 +24,21 @@ export function useProgress() {
   const [progress, setProgress] = useState<Record<string, UserProgress>>({});
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
+  const [solvedChallenges, setSolvedChallenges] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const loadProgress = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase
+
+    const { data: lessonData } = await supabase
       .from('user_progress')
       .select('*')
       .eq('user_id', userId);
 
-    if (data) {
+    if (lessonData) {
       const map: Record<string, UserProgress> = {};
       let xp = 0;
-      for (const row of data) {
+      for (const row of lessonData) {
         map[row.lesson_id] = {
           lesson_id: row.lesson_id,
           completed: row.completed,
@@ -58,6 +60,21 @@ export function useProgress() {
     if (profileData) {
       setStreak(profileData.streak || 0);
     }
+
+    const { data: challengeData } = await supabase
+      .from('challenge_progress')
+      .select('challenge_id, solved')
+      .eq('user_id', userId)
+      .eq('solved', true);
+
+    if (challengeData) {
+      const solved = new Set<string>();
+      for (const row of challengeData) {
+        solved.add(row.challenge_id);
+      }
+      setSolvedChallenges(solved);
+    }
+
     setLoading(false);
   }, [userId]);
 
@@ -89,6 +106,25 @@ export function useProgress() {
     }
   }, [userId, progress]);
 
+  const markChallengeSolved = useCallback(async (challengeId: string, xp: number) => {
+    if (solvedChallenges.has(challengeId)) return;
+
+    const { error } = await supabase
+      .from('challenge_progress')
+      .upsert({
+        user_id: userId,
+        challenge_id: challengeId,
+        solved: true,
+        solved_at: new Date().toISOString(),
+        attempts: 1,
+      }, { onConflict: 'user_id,challenge_id' });
+
+    if (!error) {
+      setSolvedChallenges(prev => new Set([...prev, challengeId]));
+      setTotalXp(prev => prev + xp);
+    }
+  }, [userId, solvedChallenges]);
+
   const isLessonComplete = useCallback((lessonId: string) => {
     return progress[lessonId]?.completed || false;
   }, [progress]);
@@ -105,7 +141,9 @@ export function useProgress() {
     totalXp,
     streak,
     loading,
+    solvedChallenges,
     markLessonComplete,
+    markChallengeSolved,
     isLessonComplete,
     getModuleProgress,
     refreshProgress: loadProgress,

@@ -1,4 +1,5 @@
 import { modules, isModuleUnlocked, type Module } from '../data/curriculum';
+import { challenges } from '../data/challenges';
 
 interface DashboardProps {
   modules: Module[];
@@ -8,6 +9,7 @@ interface DashboardProps {
   totalXp: number;
   streak: number;
   loading: boolean;
+  solvedChallenges: Set<string>;
 }
 
 const moduleIcons: Record<string, string> = {
@@ -27,7 +29,7 @@ const moduleIcons: Record<string, string> = {
   Trophy: 'M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22M18 2H6v7a6 6 0 0 0 12 0V2z',
 };
 
-export function Dashboard({ modules: mods, completedLessonIds, getModuleProgress, onNavigate, totalXp, streak, loading }: DashboardProps) {
+export function Dashboard({ modules: mods, completedLessonIds, getModuleProgress, onNavigate, totalXp, streak, loading, solvedChallenges }: DashboardProps) {
   const totalLessons = mods.reduce((sum, m) => sum + m.lessons.length, 0);
   const completedLessons = mods.reduce((sum, m) => sum + m.lessons.filter(l => completedLessonIds.has(l.id)).length, 0);
   const overallProgress = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
@@ -93,6 +95,35 @@ export function Dashboard({ modules: mods, completedLessonIds, getModuleProgress
       </div>
 
       <h2 className="text-xl font-bold text-surface-100 mb-5">Learning Path</h2>
+
+      {/* ROS2Code Practice Section */}
+      <div className="mb-10 bg-gradient-to-r from-surface-900 to-surface-900/50 border border-primary-500/20 rounded-xl p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-surface-50 mb-1 flex items-center gap-2">
+              <svg className="w-6 h-6 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+              ROS2Code
+            </h2>
+            <p className="text-surface-400 text-sm">Practice what you have learned. Write real Python code, run it in the browser, and watch the robot respond.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-primary-400">{solvedChallenges.size}</p>
+              <p className="text-xs text-surface-500">Solved</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-surface-300">{challenges.length - solvedChallenges.size}</p>
+              <p className="text-xs text-surface-500">Remaining</p>
+            </div>
+            <button
+              onClick={() => onNavigate('challenges')}
+              className="px-5 py-2.5 bg-primary-600 hover:bg-primary-500 text-surface-50 rounded-lg font-medium transition-colors text-sm"
+            >
+              Start Practicing
+            </button>
+          </div>
+        </div>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {mods.map(mod => {
           const unlocked = isModuleUnlocked(mod.id, completedLessonIds);

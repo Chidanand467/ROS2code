@@ -1,14 +1,22 @@
 import { useState, useCallback } from 'react';
 import { useProgress } from './hooks/useProgress';
 import { modules, getModule, getLesson, getNextLesson, getPreviousLesson, isModuleUnlocked, type Lesson, type Module } from './data/curriculum';
+import { getChallenge } from './data/challenges';
 import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { LessonPage } from './pages/LessonPage';
+import { ChallengeList } from './pages/ChallengeList';
+import { ChallengePage } from './pages/ChallengePage';
 
-type View = { type: 'dashboard' } | { type: 'module'; moduleId: string } | { type: 'lesson'; lessonId: string };
+type View =
+  | { type: 'dashboard' }
+  | { type: 'module'; moduleId: string }
+  | { type: 'lesson'; lessonId: string }
+  | { type: 'challengeList' }
+  | { type: 'challenge'; challengeId: string };
 
 export default function App() {
-  const { isLessonComplete, getModuleProgress, totalXp, streak, markLessonComplete, loading } = useProgress();
+  const { isLessonComplete, getModuleProgress, totalXp, streak, markLessonComplete, markChallengeSolved, solvedChallenges, loading } = useProgress();
   const [view, setView] = useState<View>({ type: 'dashboard' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -19,10 +27,14 @@ export default function App() {
   const handleNavigate = useCallback((target: string) => {
     if (target === 'dashboard') {
       setView({ type: 'dashboard' });
+    } else if (target === 'challenges') {
+      setView({ type: 'challengeList' });
     } else if (target.startsWith('mod-')) {
       setView({ type: 'module', moduleId: target });
     } else if (target.startsWith('les-')) {
       setView({ type: 'lesson', lessonId: target });
+    } else if (target.startsWith('ch-')) {
+      setView({ type: 'challenge', challengeId: target });
     }
   }, []);
 
@@ -33,19 +45,24 @@ export default function App() {
   const currentLesson = view.type === 'lesson' ? getLesson(view.lessonId) : null;
   const currentModule = view.type === 'module' ? getModule(view.moduleId) :
     currentLesson ? getModule(currentLesson.module_id) : null;
+  const currentChallenge = view.type === 'challenge' ? getChallenge(view.challengeId) : null;
+
+  const showSidebar = view.type !== 'challenge';
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-950">
-      <Sidebar
-        modules={modules}
-        currentView={view}
-        completedLessonIds={completedLessonIds}
-        onNavigate={handleNavigate}
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-        totalXp={totalXp}
-        streak={streak}
-      />
+      {showSidebar && (
+        <Sidebar
+          modules={modules}
+          currentView={view}
+          completedLessonIds={completedLessonIds}
+          onNavigate={handleNavigate}
+          isOpen={sidebarOpen}
+          onToggle={() => setSidebarOpen(!sidebarOpen)}
+          totalXp={totalXp}
+          streak={streak}
+        />
+      )}
 
       <main className="flex-1 overflow-y-auto">
         {view.type === 'dashboard' && (
@@ -57,6 +74,7 @@ export default function App() {
             totalXp={totalXp}
             streak={streak}
             loading={loading}
+            solvedChallenges={solvedChallenges}
           />
         )}
 
@@ -89,6 +107,24 @@ export default function App() {
               const mod = getModule(currentLesson.module_id);
               if (mod) setView({ type: 'module', moduleId: mod.id });
             }}
+          />
+        )}
+
+        {view.type === 'challengeList' && (
+          <ChallengeList
+            solvedIds={solvedChallenges}
+            onSelect={(id) => setView({ type: 'challenge', challengeId: id })}
+            onBack={() => setView({ type: 'dashboard' })}
+            totalXp={totalXp}
+          />
+        )}
+
+        {view.type === 'challenge' && currentChallenge && (
+          <ChallengePage
+            challenge={currentChallenge}
+            isSolved={solvedChallenges.has(currentChallenge.id)}
+            onSolved={() => markChallengeSolved(currentChallenge.id, currentChallenge.xp)}
+            onBack={() => setView({ type: 'challengeList' })}
           />
         )}
       </main>
