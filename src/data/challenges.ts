@@ -67,13 +67,11 @@ def main():
 if __name__ == '__main__':
     main()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Hello, ROS2!' in stdout and 'hello_node' in stdout:
-    _test_results.append({"name": "Correct log message", "passed": True, "message": "Node logged 'Hello, ROS2!' correctly"})
-else:
-    _test_results.append({"name": "Correct log message", "passed": False, "message": "Expected '[INFO] [hello_node]: Hello, ROS2!' in output"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Correct log message", 'Hello, ROS2!' in stdout and 'hello_node' in stdout,
+    "Node logged 'Hello, ROS2!' correctly" if 'Hello, ROS2!' in stdout and 'hello_node' in stdout
+    else "Expected '[INFO] [hello_node]: Hello, ROS2!' in output")
 `,
     hints: [
       'Use rclpy.init() to initialize, then create a Node with a name string.',
@@ -148,13 +146,10 @@ def main(args=None):
 if __name__ == '__main__':
     main()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Count: 1' in stdout and 'counter_node' in stdout:
-    _test_results.append({"name": "Timer counting", "passed": True, "message": "Node counts and logs correctly"})
-else:
-    _test_results.append({"name": "Timer counting", "passed": False, "message": "Expected 'Count: 1' from counter_node in output"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Timer counting", 'Count: 1' in stdout and 'counter_node' in stdout,
+    "Node counts and logs correctly" if 'Count: 1' in stdout else "Expected 'Count: 1' from counter_node")
 `,
     hints: [
       'Use self.create_timer(1.0, self.timer_callback) in __init__.',
@@ -226,13 +221,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Publishing: linear.x=2.0' in stdout and 'speed_publisher' in stdout:
-    _test_results.append({"name": "Publishes velocity", "passed": True, "message": "Node publishes forward velocity correctly"})
-else:
-    _test_results.append({"name": "Publishes velocity", "passed": False, "message": "Expected velocity publish log from speed_publisher"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Publishes velocity", 'Publishing: linear.x=2.0' in stdout and 'speed_publisher' in stdout,
+    "Node publishes forward velocity correctly" if 'Publishing: linear.x=2.0' in stdout else "Expected velocity publish log")
 `,
     hints: [
       'Create the publisher with self.create_publisher(Twist, "/turtle1/cmd_vel", 10).',
@@ -303,13 +295,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Moving in circle' in stdout and 'circle_navigator' in stdout:
-    _test_results.append({"name": "Circular motion", "passed": True, "message": "Node publishes circular motion commands"})
-else:
-    _test_results.append({"name": "Circular motion", "passed": False, "message": "Expected circular motion log from circle_navigator"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Circular motion", 'Moving in circle' in stdout and 'circle_navigator' in stdout,
+    "Node publishes circular motion commands" if 'Moving in circle' in stdout else "Expected circular motion log")
 `,
     hints: [
       'Set both msg.linear.x and msg.angular.z to non-zero values.',
@@ -376,13 +365,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'pose_listener' in stdout:
-    _test_results.append({"name": "Subscriber created", "passed": True, "message": "Pose listener node created and subscribed"})
-else:
-    _test_results.append({"name": "Subscriber created", "passed": False, "message": "Expected pose_listener in output"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Subscriber created", 'pose_listener' in stdout,
+    "Pose listener node created" if 'pose_listener' in stdout else "Expected pose_listener in output")
 `,
     hints: [
       'Use self.create_subscription(Pose, "/turtle1/pose", self.pose_callback, 10).',
@@ -456,13 +442,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Speed:' in stdout and 'param_speed_controller' in stdout:
-    _test_results.append({"name": "Parameter usage", "passed": True, "message": "Node uses parameters for speed control"})
-else:
-    _test_results.append({"name": "Parameter usage", "passed": False, "message": "Expected parameter-based speed log"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Parameter usage", 'Speed:' in stdout and 'param_speed_controller' in stdout,
+    "Node uses parameters" if 'Speed:' in stdout else "Expected parameter-based speed log")
 `,
     hints: [
       'Use self.declare_parameter("speed", 1.0) to declare a parameter.',
@@ -535,13 +518,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'add_service_server' in stdout and 'READY' in stdout:
-    _test_results.append({"name": "Service created", "passed": True, "message": "Add service server created successfully"})
-else:
-    _test_results.append({"name": "Service created", "passed": False, "message": "Expected service ready message"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Service created", 'add_service_server' in stdout and 'READY' in stdout,
+    "Add service server created" if 'READY' in stdout else "Expected service ready message")
 `,
     hints: [
       'Use self.create_service(type(None), "add_two_ints", self.add_callback).',
@@ -617,13 +597,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'GO!' in stdout and 'STOP!' in stdout and 'stop_go_controller' in stdout:
-    _test_results.append({"name": "Alternating states", "passed": True, "message": "Node alternates between GO and STOP"})
-else:
-    _test_results.append({"name": "Alternating states", "passed": False, "message": "Expected GO! and STOP! logs from stop_go_controller"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Alternating states", 'GO!' in stdout and 'STOP!' in stdout and 'stop_go_controller' in stdout,
+    "Node alternates between GO and STOP" if 'GO!' in stdout else "Expected GO! and STOP! logs")
 `,
     hints: [
       'Use a boolean flag (self.is_go) that toggles each timer callback.',
@@ -707,13 +684,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Moving forward' in stdout and 'Turning' in stdout and 'square_navigator' in stdout:
-    _test_results.append({"name": "Square path", "passed": True, "message": "Node alternates between forward and turn phases"})
-else:
-    _test_results.append({"name": "Square path", "passed": False, "message": "Expected forward and turn logs from square_navigator"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Square path", 'Moving forward' in stdout and 'Turning' in stdout and 'square_navigator' in stdout,
+    "Node alternates between forward and turn" if 'Moving forward' in stdout else "Expected forward and turn logs")
 `,
     hints: [
       'Use a state variable self.phase = "forward" or "turn".',
@@ -782,13 +756,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'echo_relay' in stdout:
-    _test_results.append({"name": "Relay node", "passed": True, "message": "Echo relay node created with subscriber and publisher"})
-else:
-    _test_results.append({"name": "Relay node", "passed": False, "message": "Expected echo_relay in output"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Relay node", 'echo_relay' in stdout,
+    "Echo relay node created" if 'echo_relay' in stdout else "Expected echo_relay in output")
 `,
     hints: [
       'Create both a subscriber and a publisher in __init__.',
@@ -863,13 +834,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Level' in stdout and 'Speed' in stdout and 'multi_speed_publisher' in stdout:
-    _test_results.append({"name": "Multi-speed", "passed": True, "message": "Node uses parameters for speed levels"})
-else:
-    _test_results.append({"name": "Multi-speed", "passed": False, "message": "Expected speed level log from multi_speed_publisher"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Multi-speed", 'Level' in stdout and 'Speed' in stdout and 'multi_speed_publisher' in stdout,
+    "Node uses parameters for speed levels" if 'Level' in stdout else "Expected speed level log")
 `,
     hints: [
       'Map speed_level to actual speed values using a dictionary.',
@@ -950,13 +918,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Spiral:' in stdout and 'spiral_navigator' in stdout:
-    _test_results.append({"name": "Spiral motion", "passed": True, "message": "Node creates spiral by decreasing angular velocity"})
-else:
-    _test_results.append({"name": "Spiral motion", "passed": False, "message": "Expected spiral log from spiral_navigator"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Spiral motion", 'Spiral:' in stdout and 'spiral_navigator' in stdout,
+    "Node creates spiral" if 'Spiral:' in stdout else "Expected spiral log")
 `,
     hints: [
       'Start with self.angular_z = 0.5 and subtract a small amount each tick.',
@@ -1041,13 +1006,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Left circle' in stdout and 'Right circle' in stdout and 'figure8_navigator' in stdout:
-    _test_results.append({"name": "Figure-8 pattern", "passed": True, "message": "Node alternates between left and right circles"})
-else:
-    _test_results.append({"name": "Figure-8 pattern", "passed": False, "message": "Expected left and right circle logs from figure8_navigator"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Figure-8 pattern", 'Left circle' in stdout and 'Right circle' in stdout and 'figure8_navigator' in stdout,
+    "Node alternates between left and right circles" if 'Left circle' in stdout else "Expected left and right circle logs")
 `,
     hints: [
       'Use a phase_tick counter that resets after 10 ticks.',
@@ -1141,13 +1103,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'wall_bouncer' in stdout:
-    _test_results.append({"name": "Wall bounce", "passed": True, "message": "Wall bouncer node created with pose subscriber and velocity publisher"})
-else:
-    _test_results.append({"name": "Wall bounce", "passed": False, "message": "Expected wall_bouncer in output"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Wall bounce", 'wall_bouncer' in stdout,
+    "Wall bouncer node created" if 'wall_bouncer' in stdout else "Expected wall_bouncer in output")
 `,
     hints: [
       'Subscribe to /turtle1/pose to get real-time position.',
@@ -1252,13 +1211,10 @@ def main(args=None):
     node.destroy_node()
     rclpy.shutdown()`,
     testCode: `
-_test_results = []
 import sys
-stdout = sys.stdout.getvalue() if hasattr(sys.stdout, 'getvalue') else ''
-if 'Heading to waypoint' in stdout and 'patrol_navigator' in stdout:
-    _test_results.append({"name": "Waypoint patrol", "passed": True, "message": "Patrol navigator navigates between waypoints"})
-else:
-    _test_results.append({"name": "Waypoint patrol", "passed": False, "message": "Expected waypoint navigation log from patrol_navigator"})
+stdout = _stdout_buffer.getvalue()
+_check_test("Waypoint patrol", 'Heading to waypoint' in stdout and 'patrol_navigator' in stdout,
+    "Patrol navigator navigates between waypoints" if 'Heading to waypoint' in stdout else "Expected waypoint navigation log")
 `,
     hints: [
       'Use math.atan2(dy, dx) to calculate the angle to the next waypoint.',

@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Editor from '@monaco-editor/react';
 import { type Challenge, difficultyColors, categoryColors } from '../data/challenges';
-import { globalSim, Ros2Sim } from '../lib/ros2sim';
+import { Ros2Sim } from '../lib/ros2sim';
 import { runPythonCode, loadPyodide, isPyodideReady, isPyodideLoading } from '../lib/pyrunner';
 import { Terminal } from '../components/Terminal';
 import { SimCanvas } from '../components/SimCanvas';
+import { CodespacesSetup } from '../components/CodespacesSetup';
 
 interface ChallengePageProps {
   challenge: Challenge;
@@ -13,13 +14,13 @@ interface ChallengePageProps {
   onBack: () => void;
 }
 
-type RightTab = 'terminal' | 'simulation';
+type RightTab = 'terminal' | 'simulation' | 'output';
 type LeftTab = 'description' | 'hints' | 'solution';
 
 export function ChallengePage({ challenge, isSolved, onSolved, onBack }: ChallengePageProps) {
   const [code, setCode] = useState(challenge.starterCode);
   const [leftTab, setLeftTab] = useState<LeftTab>('description');
-  const [rightTab, setRightTab] = useState<RightTab>('terminal');
+  const [rightTab, setRightTab] = useState<RightTab>('output');
   const [running, setRunning] = useState(false);
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [output, setOutput] = useState('');
@@ -27,8 +28,10 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
   const [showSolution, setShowSolution] = useState(false);
   const [hintIndex, setHintIndex] = useState(0);
   const [elapsed, setElapsed] = useState(0);
+  const [showCodespaces, setShowCodespaces] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
   const timerRef = useRef<number | null>(null);
-  const simRef = useRef(globalSim);
+  const simRef = useRef(new Ros2Sim());
 
   useEffect(() => {
     timerRef.current = window.setInterval(() => setElapsed(e => e + 1), 1000);
@@ -40,6 +43,7 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
     setPyodideLoading(true);
     setOutput('');
     setTestResults([]);
+    setHasRun(true);
 
     try {
       if (!isPyodideReady()) {
@@ -54,7 +58,7 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
 
       const result = await runPythonCode(code, sim, challenge.testCode, 15000);
 
-      setOutput(result.output + (result.error ? '\n' + result.error : ''));
+      setOutput(result.output || '(no output)');
       setTestResults(result.testResults);
 
       if (result.testResults.length > 0 && result.testResults.every(t => t.passed)) {
@@ -72,6 +76,7 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
     setCode(challenge.starterCode);
     setOutput('');
     setTestResults([]);
+    setHasRun(false);
   }, [challenge]);
 
   const formatTime = (s: number) => {
@@ -82,6 +87,13 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
 
   return (
     <div className="h-screen flex flex-col bg-surface-950">
+      {showCodespaces && (
+        <CodespacesSetup
+          challengeTitle={challenge.title}
+          onClose={() => setShowCodespaces(false)}
+        />
+      )}
+
       {/* Top Bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-surface-900 border-b border-surface-800 shrink-0">
         <div className="flex items-center gap-3">
@@ -100,6 +112,15 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
           )}
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowCodespaces(true)}
+            className="px-3 py-1.5 text-xs text-surface-300 hover:text-surface-100 bg-surface-800 hover:bg-surface-700 rounded-lg transition-colors flex items-center gap-1.5 border border-surface-700"
+          >
+            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            Real ROS2
+          </button>
           <span className="text-xs text-surface-500 font-mono">{formatTime(elapsed)}</span>
           <span className="text-xs text-surface-500">+{challenge.xp} XP</span>
         </div>
@@ -157,6 +178,10 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
                     <p className="text-xs text-surface-400">Complete the related lessons in ROS2Learn before attempting this challenge.</p>
                   </div>
                 )}
+
+                <div className="bg-surface-800/50 border border-surface-700 rounded-lg p-3">
+                  <p className="text-xs text-surface-400 mb-1">In-browser execution uses a simulated ROS2 environment. For the full experience with real ROS2 Humble, click <strong className="text-surface-200">"Real ROS2"</strong> in the toolbar to set up GitHub Codespaces.</p>
+                </div>
               </div>
             )}
 
@@ -212,6 +237,8 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
           <div className="flex items-center justify-between px-3 py-2 bg-surface-900 border-b border-surface-800 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs text-surface-500 font-mono">Python</span>
+              <span className="text-xs text-surface-600">|</span>
+              <span className="text-xs text-surface-600">Simulated ROS2</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -228,7 +255,7 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
                 {running ? (
                   <>
                     <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" /></svg>
-                    {pyodideLoading ? 'Loading...' : 'Running...'}
+                    {pyodideLoading ? 'Loading Python...' : 'Running...'}
                   </>
                 ) : (
                   <>
@@ -265,7 +292,7 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
           {/* Output Panel */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <div className="flex items-center gap-1 px-3 py-1.5 bg-surface-900 border-b border-surface-800 shrink-0">
-              {(['terminal', 'simulation'] as RightTab[]).map(tab => (
+              {(['output', 'terminal', 'simulation'] as RightTab[]).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setRightTab(tab)}
@@ -274,11 +301,27 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
                   }`}
                 >
                   {tab}
+                  {tab === 'output' && hasRun && (
+                    <span className="ml-1 w-1.5 h-1.5 rounded-full bg-primary-400 inline-block" />
+                  )}
                 </button>
               ))}
             </div>
 
             <div className="flex-1 overflow-hidden">
+              {rightTab === 'output' && (
+                <div className="h-full bg-[#0a0e17] overflow-y-auto p-4">
+                  {!hasRun ? (
+                    <div className="text-center py-12">
+                      <svg className="w-12 h-12 text-surface-700 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      <p className="text-surface-500 text-sm">Click <strong>Run</strong> to execute your code</p>
+                      <p className="text-surface-600 text-xs mt-1">Output will appear here</p>
+                    </div>
+                  ) : (
+                    <pre className="text-sm text-surface-200 font-mono whitespace-pre-wrap">{output}</pre>
+                  )}
+                </div>
+              )}
               {rightTab === 'terminal' && (
                 <Terminal sim={simRef.current} className="h-full" />
               )}
