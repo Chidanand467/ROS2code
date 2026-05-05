@@ -7,13 +7,15 @@ import { Dashboard } from './pages/Dashboard';
 import { LessonPage } from './pages/LessonPage';
 import { ChallengeList } from './pages/ChallengeList';
 import { ChallengePage } from './pages/ChallengePage';
+import { PlaygroundPage } from './pages/PlaygroundPage';
 
 type View =
   | { type: 'dashboard' }
   | { type: 'module'; moduleId: string }
   | { type: 'lesson'; lessonId: string }
   | { type: 'challengeList' }
-  | { type: 'challenge'; challengeId: string };
+  | { type: 'challenge'; challengeId: string }
+  | { type: 'playground' };
 
 export default function App() {
   const { isLessonComplete, getModuleProgress, totalXp, streak, markLessonComplete, markChallengeSolved, solvedChallenges, loading } = useProgress();
@@ -27,6 +29,8 @@ export default function App() {
   const handleNavigate = useCallback((target: string) => {
     if (target === 'dashboard') {
       setView({ type: 'dashboard' });
+    } else if (target === 'playground') {
+      setView({ type: 'playground' });
     } else if (target === 'challenges') {
       setView({ type: 'challengeList' });
     } else if (target.startsWith('mod-')) {
@@ -47,7 +51,7 @@ export default function App() {
     currentLesson ? getModule(currentLesson.module_id) : null;
   const currentChallenge = view.type === 'challenge' ? getChallenge(view.challengeId) : null;
 
-  const showSidebar = view.type !== 'challenge';
+  const showSidebar = view.type !== 'challenge' && view.type !== 'playground';
 
   return (
     <div className="flex h-screen overflow-hidden bg-surface-950">
@@ -125,6 +129,12 @@ export default function App() {
             isSolved={solvedChallenges.has(currentChallenge.id)}
             onSolved={() => markChallengeSolved(currentChallenge.id, currentChallenge.xp)}
             onBack={() => setView({ type: 'challengeList' })}
+          />
+        )}
+
+        {view.type === 'playground' && (
+          <PlaygroundPage
+            onBack={() => setView({ type: 'dashboard' })}
           />
         )}
       </main>

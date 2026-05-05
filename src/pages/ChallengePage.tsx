@@ -89,7 +89,6 @@ export function ChallengePage({ challenge, isSolved, onSolved, onBack }: Challen
     <div className="h-screen flex flex-col bg-surface-950">
       {showCodespaces && (
         <CodespacesSetup
-          challengeTitle={challenge.title}
           onClose={() => setShowCodespaces(false)}
         />
       )}

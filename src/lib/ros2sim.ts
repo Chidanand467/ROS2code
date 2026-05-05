@@ -228,7 +228,7 @@ export class Ros2Sim {
       if (Math.abs(turtle.linearX) > 0.001 || Math.abs(turtle.angularZ) > 0.001) {
         turtle.theta += turtle.angularZ * dt;
         turtle.x += turtle.linearX * Math.cos(turtle.theta) * dt;
-        turtle.y += turtle.linearZ !== undefined ? 0 : turtle.linearX * Math.sin(turtle.theta) * dt;
+        turtle.y += turtle.linearX * Math.sin(turtle.theta) * dt;
         turtle.x = Math.max(0, Math.min(11, turtle.x));
         turtle.y = Math.max(0, Math.min(11, turtle.y));
 
@@ -407,7 +407,7 @@ export class Ros2Sim {
 
   handleCliCommand(cmd: string): string {
     const parts = cmd.trim().split(/\s+/);
-    if (parts[0] !== 'ros2') return `bash: ros2: command not found. Type 'ros2 --help' for available commands.`;
+    if (parts[0] !== 'ros2') return `bash: ${parts[0]}: command not found. Type 'help' for available commands.`;
 
     const sub = parts[1];
     switch (sub) {
@@ -428,34 +428,107 @@ export class Ros2Sim {
         return 'Usage: ros2 node list | ros2 node info /node_name';
       }
       case 'topic': {
-        if (parts[2] === 'list') return this.getTopics().join('\n') || '(no topics)';
+        if (parts[2] === 'list') {
+          const topics = this.getTopics();
+          if (topics.length === 0) return '(no topics)';
+          return topics.map(t => {
+            const info = this.getTopicInfo(t);
+            return `${t} [${info?.type || 'unknown'}]`;
+          }).join('\n');
+        }
         if (parts[2] === 'echo') {
-          return `(topic echo is shown in real-time in the terminal output)`;
+          const topic = parts[3];
+          if (!topic) return 'Usage: ros2 topic echo /topic_name';
+          if (!this.topics.has(topic)) return `Topic ${topic} not found. Available: ${this.getTopics().join(', ') || 'none'}`;
+          const turtle = this.turtles.get('turtle1');
+          if (topic === '/turtle1/pose' && turtle) {
+            return `x: ${turtle.x.toFixed(4)}\ny: ${turtle.y.toFixed(4)}\ntheta: ${turtle.theta.toFixed(4)}\nlinear_velocity: ${turtle.linearX.toFixed(4)}\nangular_velocity: ${turtle.angularZ.toFixed(4)}`;
+          }
+          return `(streaming ${topic} - watch the terminal for live messages)`;
         }
         if (parts[2] === 'info') {
           const topic = parts[3];
           const info = this.getTopicInfo(topic);
           if (!info) return `Topic ${topic} not found`;
-          return `Type: ${info.type}\nSubscription count: ${info.subscriberCount}`;
+          return `Type: ${info.type}\nSubscription count: ${info.subscriberCount}\nPublisher count: ${this.nodes.values().next().value?.publishers.filter(p => p.topic === topic).length || 0}`;
         }
-        return 'Usage: ros2 topic list | ros2 topic info /topic';
+        if (parts[2] === 'pub') {
+          const topic = parts[3];
+          if (!topic) return 'Usage: ros2 topic pub /topic type "{data}"';
+          const dataMatch = cmd.match(/"(.+)"/);
+          let data: Record<string, unknown> = {};
+          if (dataMatch) {
+            try {
+              data = JSON.parse(dataMatch[1].replace(/(\w+):/g, '"$1":'));
+            } catch {
+              data = { raw: dataMatch[1] };
+            }
+          }
+          this.publish(topic, parts[4] || 'unknown', data);
+          return `Published to ${topic}`;
+        }
+        return 'Usage: ros2 topic list | ros2 topic echo /topic | ros2 topic info /topic | ros2 topic pub /topic type "{data}"';
       }
       case 'service': {
         if (parts[2] === 'list') return this.getServices().join('\n') || '(no services)';
-        return 'Usage: ros2 service list';
+        if (parts[2] === 'call') {
+          const name = parts[3];
+          if (!name) return 'Usage: ros2 service call /service_name type "{request}"';
+          const service = this.services.get(name);
+          if (!service) return `Service ${name} not found`;
+          return `Called service ${name} (simulated)`;
+        }
+        return 'Usage: ros2 service list | ros2 service call /name type "{req}"';
       }
       case 'action': {
         if (parts[2] === 'list') return this.getActions().join('\n') || '(no actions)';
         return 'Usage: ros2 action list';
       }
+      case 'run': {
+        const pkg = parts[2];
+        const exec = parts[3];
+        if (!pkg || !exec) return 'Usage: ros2 run package_name executable_name';
+        if (pkg === 'turtlesim' && exec === 'turtlesim_node') {
+          this.init();
+          return `Started turtlesim node. Use the Simulation tab to see the turtle.`;
+        }
+        return `[INFO] [ros2sim]: Running ${pkg} ${exec} (simulated)`;
+      }
+      case 'param': {
+        if (parts[2] === 'list') {
+          const nodeName = parts[3]?.replace(/^\//, '');
+          if (!nodeName) return 'Usage: ros2 param list /node_name';
+          const node = this.nodes.get(nodeName);
+          if (!node) return `Node /${nodeName} not found`;
+          const params = Array.from(node.parameters.keys());
+          return params.length > 0 ? params.join('\n') : '(no parameters)';
+        }
+        if (parts[2] === 'get') {
+          const nodeName = parts[3]?.replace(/^\//, '');
+          const paramName = parts[4];
+          if (!nodeName || !paramName) return 'Usage: ros2 param get /node_name param_name';
+          const node = this.nodes.get(nodeName);
+          if (!node) return `Node /${nodeName} not found`;
+          const param = node.parameters.get(paramName);
+          if (!param) return `Parameter '${paramName}' not found`;
+          return `${paramName}:\n  type: ${param.type}\n  value: ${JSON.stringify(param.value)}`;
+        }
+        return 'Usage: ros2 param list /node | ros2 param get /node param';
+      }
       case '--help': case '-h':
         return `Available commands:
-  ros2 node list          List active nodes
-  ros2 node info /name    Show node details
-  ros2 topic list         List active topics
-  ros2 topic info /topic  Show topic info
-  ros2 service list       List active services
-  ros2 action list        List active actions`;
+  ros2 node list              List active nodes
+  ros2 node info /name        Show node details
+  ros2 topic list              List active topics
+  ros2 topic echo /topic      Show topic data
+  ros2 topic info /topic      Show topic info
+  ros2 topic pub /topic type "{data}"  Publish to a topic
+  ros2 service list           List active services
+  ros2 service call /name type "{req}" Call a service
+  ros2 action list            List active actions
+  ros2 run pkg exec           Run a node executable
+  ros2 param list /node       List node parameters
+  ros2 param get /node param  Get parameter value`;
       default:
         return `ros2: '${sub}' is not a ros2 command. Type 'ros2 --help'.`;
     }
